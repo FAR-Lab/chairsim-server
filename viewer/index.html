@@ -1,0 +1,73 @@
+<html>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/p5.js"></script>
+  <title>Viewing run #%RUN_ID%</title>
+</head>
+<body>
+  <script type="text/javascript">
+    var ws;
+    
+    var keys = {};
+    var messages = [];
+
+    function atoo(a) {
+      let out = {};
+      a.forEach((v, i) => {
+        out[keys[i]] = Number(v);
+      });
+      return out;
+    }    
+
+    function mx(v) {
+      return map(v, -25, 25, 0, width);
+    }
+    function my(v) {
+      return map(v, -25, 25, height, 0);
+    }
+
+    function setup() {
+      createCanvas(500, 500);
+      ws = new WebSocket('ws://'+location.host+'/view/%RUN_ID%');
+      ws.addEventListener('message', (msg) => {
+        // console.log("message!", msg);
+        let data = msg.data;
+        if (data[0] === 'i') {
+          keys = data.split(',');
+          return;
+        }
+        messages.push(atoo(data.split(',')));
+        updateState();
+      });
+    }
+    
+    var data = [];
+    function updateState() {
+      while (messages.length > 0 && messages[0].t * 1000 < millis()) {
+        let msg = messages.shift();
+        data[msg.i] = msg;
+      }
+    }
+
+    function draw() {
+      updateState();
+      background(255);
+      noStroke();
+      data.forEach((d) => {
+        fill(d.i === 0 ? 'green' : 'red');
+        push();
+        translate(mx(d.px), my(d.pz));
+        rotate(d.ry * PI/180);
+        scale(5);
+        triangle(0, -1, -0.5, 1, 0.5, 1);
+        noFill();
+        stroke(d.i === 0 ? 'green' : 'red');
+        strokeWeight(0.2);
+        rotate(-d.ry*PI/180);
+        line(0, 0, 10*d.vx, -10*d.vz);
+        ellipse(0, 0, 4);
+        pop();
+      });
+    }
+  </script>
+</body>
+</html>  
